@@ -1,4 +1,4 @@
-使用STM32F030K6（32KB ROM，4KB RAM）作为平台移植SL_RTE，裁剪情况如下：
+使用STM32F030K6（32KB ROM，4KB RAM，8M内部RC配合PLL主频48）作为平台移植SL_RTE，裁剪情况如下：
 
 1、没有开启RTOS支持；
 
