@@ -22,6 +22,9 @@ extern "C" {
 //      <q> 实时操作系统环境
 //      <i> 默认是RTX5
 #define RTE_USE_OS                 0
+//      <q> 运行在PC环境上
+//      <i> 默认是嵌入式环境
+#define RTE_USE_PC                 0
 //=======================
 //  </h> RTE基本配置
 //=======================
@@ -71,9 +74,11 @@ extern "C" {
 #if RTE_USE_MEMORY == 1
 // 		<o> 动态内存管理类型 <0=>LVGL <1=>TLSF
 // 		<i> 设置动态内存管理的类型
-// 		<i>                  LVGL（边界标定法，资源消耗少，碎片多）
-// 		<i>                  TLSF（TLSF法，资源消耗大，碎片少）
+// 		<i>                  LVGL（边界标定法，资源消耗少，碎片多，建议8K内存以下使用）
+// 		<i>                  TLSF（TLSF法，资源消耗大，碎片少，建议8K内存以上使用）
 #define MEMORY_TYPE                0
+// 		<q> 64位处理器使能
+#define MEMORY_64BIT               0
 // 		<q> 动态内存模块调试信息
 // 		<i> 使能动态内存模块调试信息输出
 #define MEMORY_DEBUG               1
@@ -83,8 +88,6 @@ extern "C" {
 #define RTE_MEM_SIZE    		        (2U)
 #if MEMORY_TYPE == 0
 //      <h> LVGL类型下参数配置
-// 			<q> 64位处理器使能
-#define  MEMORY_SIMPLE_64BIT       0
 // 			<q> 自动碎片整理
 #define  MEMORY_SIMPLE_AUTODEFRAG  1
 //      </h> 简单模式
@@ -117,7 +120,7 @@ extern "C" {
 // 		<i>                SIMPLE（简单时间片轮询，静态管理，需要手动维护RR头文件中的定时器）
 // 		<i>                BASE（基础时间片轮询，动态管理，不分组，定时器名称由用户维护）
 // 		<i>                FULL（分组时间片轮询，动态管理，适合多线程环境，组名称和定时器名称由用户维护）
-#define RR_TYPE                       1   
+#define RR_TYPE                       1
 // 		<q> 时间片轮询调试信息
 // 		<i> 使能时间片轮询调试信息输出
 #define RR_DEBUG                      1
@@ -200,7 +203,7 @@ extern "C" {
 // <e> SHELL模块
 //=======================
 // <i> 消息交互模块，依赖模块：环形队列模块，VEC模块，动态内存管理。
-#define RTE_USE_SHELL                 0
+#define RTE_USE_SHELL                 1
 #if RTE_USE_SHELL == 1
 #if RTE_USE_VEC == 0 || RTE_USE_MEMORY == 0 || RTE_USE_STREAM == 0
 #error "需要VEC模块、动态内存模块以及数据流模块的支持"

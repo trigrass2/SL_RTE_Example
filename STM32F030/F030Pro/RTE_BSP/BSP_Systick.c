@@ -29,13 +29,13 @@ void BSP_Systick_Init(void)
 #if RTE_USE_OS == 0
 void SysTick_Handler(void)
 {
-	static uint32_t WDTTick = 0;
-	WDTTick++;
-	if(WDTTick == 4000)
-	{
-		WWDG_SetCounter(127);
-		WDTTick=0;
-	}
+//	static uint32_t WDTTick = 0;
+//	WDTTick++;
+//	if(WDTTick == 4000)
+//	{
+//		WWDG_SetCounter(127);
+//		WDTTick=0;
+//	}
 	RoundRobin_TickHandler();
 }
 /**

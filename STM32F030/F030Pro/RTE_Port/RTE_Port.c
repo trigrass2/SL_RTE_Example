@@ -13,11 +13,11 @@
 *** Function: 断言功能
 *************************************************/
 void RTE_Assert(char *file, uint32_t line)
-{ 
+{
 	uprintf("[ASSERT]    Wrong parameters value: file %s on line %d\r\n", file, line);
 	while (1)
 	{
-		
+
 	}
 }
 /*************************************************
@@ -37,7 +37,7 @@ static const ef_env rte_kvdb_lib[] = {
 	{"ch4per","100"},
 };
 #define KVDB_TXT  "[KVDB]"
-void KVDB_Init(void) 
+void KVDB_Init(void)
 {
 	#if RTE_USE_OS == 1
 	static const osMutexAttr_t MutexIDKVDBAttr = {
@@ -140,7 +140,7 @@ void RTE_Init(void)
 		#if RR_TYPE == 2
 			RoundRobin_CreateTimer(0,0,10,1,1,Shell_Poll,(void *)0);
 		#else
-			
+            RoundRobin_CreateTimer(RoundRobin_GetTimerNum(),1000,1,1,Shell_Poll,(void *)0);
 		#endif
 	#endif
 #endif

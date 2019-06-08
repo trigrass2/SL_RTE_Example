@@ -32,13 +32,10 @@ int main(void)
 	Printf_RegPutC(RTE_Putc);
 	uprintf("%10s    Run At %d Hz!\r\n","[SYSTEM]",SystemCoreClock);
 	KVDB_Init();
-#if RTE_USE_SHELL == 1
-	RoundRobin_CreateTimer(RoundRobin_GetTimerNum(),1000,1,1,Shell_Poll,(void *)0);
-#endif
 	RoundRobin_CreateTimer(RoundRobin_GetTimerNum(),50000,1,1,LEDTimer_Callback,NULL);
 	BSP_SoftPWM_Init(SOFTPWM_1,1000,100);
 	BSP_SoftPWM_Start(SOFTPWM_1);
-	WWDG_Config();
+	//WWDG_Config();
 	BSP_Led_Init();
 	BSP_Systick_Init();
 	while (1)

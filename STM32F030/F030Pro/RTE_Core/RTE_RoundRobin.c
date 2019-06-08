@@ -21,8 +21,12 @@
 #include "RTE_Printf.h"
 #endif
 #define RR_STR "[RR]"
+#if RTE_USE_PC == 0
 #include "RTE_Components.h"
 #include CMSIS_device_header
+#else
+#include <SDL2/SDL.h>
+#endif
 #if RR_TYPE == 0
 /*************************************************
 *** 管理RoundRobin的结构体变量，静态管理
@@ -30,11 +34,21 @@
 static rr_softtimer_t RoundRobinTimerHandle[TIMER_N] = {0}
 #if RTE_USE_OS == 0
 static volatile uint32_t RoundRobinRunTick = 0;
-#endif	
+#endif
 static uint8_t TimerNum = 0;
 #elif RR_TYPE == 1 || RR_TYPE == 2
 static rr_t RoundRobinHandle = {0};
 #endif
+#if RTE_USE_SHELL == 1
+#include "RTE_Shell.h"
+static shell_error_e Shell_RR_Demon(int argc, char *argv[])
+{
+    if(argc!=2)
+        return SHELL_ARGSERROR;
+    RoundRobin_Demon();
+	return(SHELL_NOERR);
+}
+#endif // USE_SHELL
 /*************************************************
 *** Args:   NULL
 *** Function: RoundRobin初始化
@@ -58,6 +72,10 @@ void RoundRobin_Init(void)
 	RoundRobinHandle.RoundRobinRunTick = 0;
 #endif
 #endif
+#if RTE_USE_SHELL
+    Shell_CreateModule("timer");
+    Shell_AddCommand("timer","demon",Shell_RR_Demon,"Demon all running timers Example:timer.demon");
+#endif // RTE_USE_SHELL
 #if RR_DWT == 1
 #ifndef RTE_Compiler_EventRecorder
 	/* Enable TRC */
@@ -67,7 +85,7 @@ void RoundRobin_Init(void)
 	DWT->CTRL &= ~0x00000001;
 	DWT->CTRL |=  0x00000001;
 	/* Reset counter */
-	DWT->CYCCNT = 0;	
+	DWT->CYCCNT = 0;
 	/* 2 dummys */
 	__ASM volatile ("NOP");
 	__ASM volatile ("NOP");
@@ -157,7 +175,7 @@ void RoundRobin_TickHandler(void)
 	// Loop through each timer in the timer table.
 	for(uint8_t i = 0; i < TIMER_N; i++)
 	{
-		if (RoundRobinTimerHandle[i].Flags.F.CNTEN) 
+		if (RoundRobinTimerHandle[i].Flags.F.CNTEN)
 		{
 			/* Decrease counter if needed */
 			if (RoundRobinTimerHandle[i].CNT)
@@ -180,6 +198,7 @@ void RoundRobin_TickHandler(void)
 				Timer->CNT--;
 		}
 	}
+	RoundRobin_Run();
 #elif RR_TYPE == 2
 #if RTE_USE_OS == 0
 	RoundRobinHandle.RoundRobinRunTick++;
@@ -210,7 +229,7 @@ void RoundRobin_TickHandler(void)
 *** Function: RoundRobin运行函数，在主函数或线程中调用
 *************************************************/
 void RoundRobin_Run(
-#if RR_TYPE == 2 
+#if RR_TYPE == 2
 	uint8_t GroupID
 #else
 	void
@@ -402,7 +421,7 @@ rr_error_e RoundRobin_ResetTimer(
 	RTE_AssertParam(Timer->TimerID == TimerID);
 	Timer->CNT = Timer->ARR;
 	return RR_NOERR;
-#endif	
+#endif
 }
 /*************************************************
 *** Args:
@@ -550,17 +569,20 @@ uint8_t RoundRobin_GetTimerNum(
 *** Args: Null
 *** Function: 获取当前RoundRobin环境运行时间
 *************************************************/
-uint32_t RoundRobin_GetTick(void) 
+uint32_t RoundRobin_GetTick(void)
 {
 	/* Return current time in milliseconds */
 #if RTE_USE_OS == 1
-	if (osKernelGetState () == osKernelRunning) 
+#if RTE_USE_PC == 1
+    return SDL_GetTicks();
+#else
+	if (osKernelGetState () == osKernelRunning)
 		return osKernelGetTickCount();
 	else
 	{
 		static uint32_t ticks = 0U;
 					 uint32_t i;
-		/* If Kernel is not running wait approximately 1 ms then increment 
+		/* If Kernel is not running wait approximately 1 ms then increment
 			 and return auxiliary tick counter value */
 		for (i = (SystemCoreClock >> 14U); i > 0U; i--) {
 			__NOP(); __NOP(); __NOP(); __NOP(); __NOP(); __NOP();
@@ -568,13 +590,14 @@ uint32_t RoundRobin_GetTick(void)
 		}
 		return ++ticks;
 	}
+#endif
 #else
 #if RR_TYPE == 0
 	return RoundRobinRunTick;
 #elif RR_TYPE == 1||RR_TYPE == 2
 	return RoundRobinHandle.RoundRobinRunTick;
 #endif
-#endif 
+#endif
 }
 /*************************************************
 *** Args: prev_tick a previous time stamp (return value of systick_get() )
@@ -584,9 +607,9 @@ uint32_t RoundRobin_TickElaps(uint32_t prev_tick)
 {
 	uint32_t act_time = RoundRobin_GetTick();
 	/*If there is no overflow in sys_time simple subtract*/
-	if(act_time >= prev_tick) 
+	if(act_time >= prev_tick)
 		prev_tick = act_time - prev_tick;
-	else 
+	else
 	{
 		prev_tick = UINT32_MAX - prev_tick + 1;
 		prev_tick += act_time;
@@ -594,35 +617,41 @@ uint32_t RoundRobin_TickElaps(uint32_t prev_tick)
 	return prev_tick;
 }
 /*************************************************
-*** Args: Delay延时一段时钟基准 
+*** Args: Delay延时一段时钟基准
 *** Function: 延时一段毫秒
 *************************************************/
 void RoundRobin_Delay(uint32_t Delay) {
 	/* Delay for amount of milliseconds */
+#if RTE_USE_PC == 0
 	/* Check if we are called from ISR */
-	if (__get_IPSR() == 0) 
+	if (__get_IPSR() == 0)
 	{
+#endif
 		/* Called from thread mode */
 		uint32_t tickstart = RoundRobin_GetTick();
 		/* Count interrupts */
 		while ((RoundRobin_GetTick() - tickstart) < Delay)
 		{
+#if RTE_USE_PC == 0
 #if RTE_USE_OS == 0
 			/* Go sleep, wait systick interrupt */
 			__WFI();
 #endif
+#endif
 		}
+#if RTE_USE_PC == 0
 	}
-	else 
+	else
 	{
 		/* Called from interrupt mode */
-		while (Delay) 
+		while (Delay)
 		{
 			/* Check if timer reached zero after we last checked COUNTFLAG bit */
 			if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk)
 				Delay--;
 		}
 	}
+#endif
 }
 #if RR_DWT == 1
 /*************************************************
